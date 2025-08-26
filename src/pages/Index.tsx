@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import StartScreen from '../components/StartScreen';
 import GameScreen from '../components/GameScreen';
@@ -19,11 +18,11 @@ const Index = () => {
   useEffect(() => {
     // Limpa salas antigas ao carregar
     void cleanupOldRooms();
-    
+
     // Verifica se há um parâmetro de sala na URL
     const urlParams = new URLSearchParams(window.location.search);
     const roomParam = urlParams.get('room');
-    
+
     if (roomParam) {
       setRoomId(roomParam);
       setIsGuest(true);

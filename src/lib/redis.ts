@@ -34,15 +34,18 @@ async function request<T>(path: string): Promise<T> {
       Authorization: `Bearer ${UPSTASH_TOKEN}`
     }
   });
+
   if (!res.ok) {
-    throw new Error(`Upstash request failed with ${res.status}`);
+    const text = await res.text();
+    throw new Error(`Upstash request failed with ${res.status}: ${text}`);
   }
-  return res.json();
+
+  return res.json() as Promise<T>;
 }
 
 export async function redisSet(key: string, value: string, ttlSeconds?: number): Promise<void> {
   const ex = ttlSeconds ? `?EX=${ttlSeconds}` : '';
-  await request(`set/${key}/${encodeURIComponent(value)}${ex}`);
+  await request<void>(`set/${key}/${encodeURIComponent(value)}${ex}`);
 }
 
 export async function redisGet(key: string): Promise<string | null> {
@@ -51,5 +54,5 @@ export async function redisGet(key: string): Promise<string | null> {
 }
 
 export async function redisDel(key: string): Promise<void> {
-  await request(`del/${key}`);
+  await request<void>(`del/${key}`);
 }
