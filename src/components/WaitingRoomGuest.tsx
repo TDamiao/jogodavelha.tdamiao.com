@@ -23,11 +23,10 @@ const WaitingRoomGuest: React.FC<WaitingRoomGuestProps> = ({
 
   useEffect(() => {
     console.log('🚀 INICIANDO VERIFICAÇÃO DA SALA:', roomId);
-    
-    // Aguarda um pouco para dar tempo do localStorage sincronizar
-    const timer = setTimeout(() => {
+
+    const timer = setTimeout(async () => {
       console.log('⏰ VERIFICANDO SALA APÓS TIMEOUT');
-      const exists = verifyRoomExists(roomId);
+      const exists = await verifyRoomExists(roomId);
       console.log('📊 RESULTADO FINAL:', exists);
       setRoomExists(exists);
     }, 500);
@@ -49,7 +48,7 @@ const WaitingRoomGuest: React.FC<WaitingRoomGuestProps> = ({
     console.log('🎯 Tentando entrar na sala:', roomId);
     
     try {
-      const room = joinRoom(roomId, guestName.trim());
+      const room = await joinRoom(roomId, guestName.trim());
       
       if (room) {
         console.log('🎉 Sucesso ao entrar na sala');
