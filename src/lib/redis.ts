@@ -1,6 +1,17 @@
 let UPSTASH_URL = import.meta.env.VITE_UPSTASH_REDIS_REST_URL as string | undefined;
 let UPSTASH_TOKEN = import.meta.env.VITE_UPSTASH_REDIS_REST_TOKEN as string | undefined;
 
+// Allow the REST URL env to contain the full redis:// connection string
+if (UPSTASH_URL?.startsWith('redis://')) {
+  try {
+    const url = new URL(UPSTASH_URL);
+    UPSTASH_URL = `https://${url.hostname}`;
+    UPSTASH_TOKEN = url.password;
+  } catch (e) {
+    console.error('Invalid VITE_UPSTASH_REDIS_REST_URL', e);
+  }
+}
+
 // Allow using a single Upstash Redis URL like the one used with redis-cli
 // e.g. redis://default:token@host:6379
 if ((!UPSTASH_URL || !UPSTASH_TOKEN) && import.meta.env.VITE_UPSTASH_REDIS_URL) {
@@ -25,7 +36,8 @@ async function request<T>(path: string): Promise<T> {
   });
 
   if (!res.ok) {
-    throw new Error(`Upstash request failed with ${res.status}`);
+    const text = await res.text();
+    throw new Error(`Upstash request failed with ${res.status}: ${text}`);
   }
 
   return res.json() as Promise<T>;
