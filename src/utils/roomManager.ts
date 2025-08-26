@@ -1,7 +1,7 @@
-import { Room, Player } from '../types/game';
+import { Room, Player, GameState } from '../types/game';
 import { createInitialGameState } from './gameLogic';
 
-const ROOMS_KEY = 'tic-tac-toe-rooms';
+const ROOMS_KEY = 'jogo-da-velha-rooms';
 
 export const generateRoomId = (): string => {
   return Math.random().toString(36).substr(2, 8).toUpperCase();
@@ -190,7 +190,7 @@ export const joinRoom = (roomId: string, playerName: string): Room | null => {
   return room;
 };
 
-export const updateRoomGameState = (roomId: string, gameState: any): void => {
+export const updateRoomGameState = (roomId: string, gameState: GameState): void => {
   const room = getRoom(roomId);
   if (room) {
     room.gameState = gameState;
