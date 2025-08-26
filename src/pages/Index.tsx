@@ -5,7 +5,7 @@ import GameScreen from '../components/GameScreen';
 import WaitingRoom from '../components/WaitingRoom';
 import { GameState } from '../types/game';
 import { createInitialGameState } from '../utils/gameLogic';
-import { createRoom, joinRoom, cleanupOldRooms } from '../utils/roomManager';
+import { createRoom, cleanupOldRooms, deleteRoom } from '../utils/roomManager';
 
 type AppState = 'start' | 'waiting' | 'game' | 'joining';
 
@@ -18,7 +18,7 @@ const Index = () => {
 
   useEffect(() => {
     // Limpa salas antigas ao carregar
-    cleanupOldRooms();
+    void cleanupOldRooms();
     
     // Verifica se há um parâmetro de sala na URL
     const urlParams = new URLSearchParams(window.location.search);
@@ -31,19 +31,24 @@ const Index = () => {
     }
   }, []);
 
-  const handleStartGame = (name: string, mode: 'bot' | 'multiplayer') => {
+  const handleStartGame = async (name: string, mode: 'bot' | 'multiplayer') => {
     setPlayerName(name);
-    
+
     if (mode === 'bot') {
       const initialState = createInitialGameState('bot');
       setGameState(initialState);
       setAppState('game');
     } else {
       // Modo multiplayer - criar sala
-      const room = createRoom(name);
-      setRoomId(room.id);
-      setIsGuest(false);
-      setAppState('waiting');
+      try {
+        const room = await createRoom(name);
+        setRoomId(room.id);
+        setIsGuest(false);
+        setAppState('waiting');
+      } catch (err) {
+        console.error('Erro ao criar sala', err);
+        alert('Não foi possível criar a sala. Verifique as credenciais do Upstash.');
+      }
     }
   };
 
@@ -55,13 +60,16 @@ const Index = () => {
     setAppState('game');
   };
 
-  const handleBackToStart = () => {
+  const handleBackToStart = async () => {
+    if (roomId) {
+      await deleteRoom(roomId);
+    }
     setAppState('start');
     setPlayerName('');
     setGameState(null);
     setRoomId(null);
     setIsGuest(false);
-    
+
     // Remove parâmetro da URL se existir
     const url = new URL(window.location.href);
     url.searchParams.delete('room');

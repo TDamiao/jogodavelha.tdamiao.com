@@ -24,11 +24,11 @@ const WaitingRoomHost: React.FC<WaitingRoomHostProps> = ({
   const [waitingTime, setWaitingTime] = useState(0);
 
   useEffect(() => {
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
       setWaitingTime(prev => prev + 1);
-      
-      if (checkRoomReady(roomId)) {
-        const room = getRoom(roomId);
+
+      if (await checkRoomReady(roomId)) {
+        const room = await getRoom(roomId);
         if (room && room.players.length === 2) {
           toast({
             title: "Jogador conectado!",
