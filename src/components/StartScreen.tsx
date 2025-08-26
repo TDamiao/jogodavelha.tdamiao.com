@@ -36,7 +36,7 @@ const StartScreen: React.FC<StartScreenProps> = ({ onStartGame }) => {
             </div>
           </div>
           <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-            Tic Tac Toe
+            Jogo da Velha
           </CardTitle>
           <p className="text-muted-foreground text-sm mt-2">
             Jogo da velha que nunca empata!

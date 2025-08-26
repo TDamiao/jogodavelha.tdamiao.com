@@ -51,24 +51,24 @@ const GameScreen: React.FC<GameScreenProps> = ({
   useEffect(() => {
     if (!roomId || gameState.gameMode !== 'multiplayer') return;
 
-    const syncInterval = setInterval(() => {
+    const handleStorage = () => {
       const currentTimestamp = getLastMoveTimestamp(roomId);
-      
       if (currentTimestamp > lastMoveTimestamp) {
         const room = getRoom(roomId);
         if (room && room.gameState) {
           setGameState(room.gameState);
           setLastMoveTimestamp(currentTimestamp);
-          
-          // Atualiza se é o turno do jogador
+
           const isHost = room.players[0].name === playerName;
           const playerSymbol = isHost ? 'X' : 'O';
           setIsMyTurn(room.gameState.currentPlayer === playerSymbol);
         }
       }
-    }, 1000); // Verifica a cada segundo
+    };
 
-    return () => clearInterval(syncInterval);
+    window.addEventListener('storage', handleStorage);
+
+    return () => window.removeEventListener('storage', handleStorage);
   }, [roomId, lastMoveTimestamp, playerName, gameState.gameMode]);
 
   useEffect(() => {

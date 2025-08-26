@@ -1,7 +1,7 @@
 
 import { GameStats } from '../types/game';
 
-const STATS_KEY = 'tic-tac-toe-stats';
+const STATS_KEY = 'jogo-da-velha-stats';
 
 export const getStats = (): GameStats => {
   const saved = localStorage.getItem(STATS_KEY);
