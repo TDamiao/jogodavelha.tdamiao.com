@@ -6,7 +6,7 @@ import { ArrowLeft, RotateCcw, Share2, Crown, Bot } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import GameBoard from './GameBoard';
 import GameStats from './GameStats';
-import { GameState, GameStats as GameStatsType } from '../types/game';
+import { GameState, GameStats as GameStatsType, Room } from '../types/game';
 import { makeMove, getBestMove } from '../utils/gameLogic';
 import { updateStatsOnGameStart, updateStatsOnGameEnd, getStats } from '../utils/statsManager';
 import { updateRoomGameState, getRoom, getLastMoveTimestamp } from '../utils/roomManager';
@@ -29,36 +29,17 @@ const GameScreen: React.FC<GameScreenProps> = ({
   const [isThinking, setIsThinking] = useState(false);
   const [lastMoveTimestamp, setLastMoveTimestamp] = useState(0);
   const [isMyTurn, setIsMyTurn] = useState(true); // Para multiplayer
+  const [roomInfo, setRoomInfo] = useState<Room | null>(null);
 
   useEffect(() => {
-    // Inicia as estatísticas do jogo
-    const newStats = updateStatsOnGameStart();
-    setStats(newStats);
-    
-    // Se é multiplayer, determina se é o turno do jogador
-    if (roomId && gameState.gameMode === 'multiplayer') {
-      const room = getRoom(roomId);
-      if (room) {
-        // Host joga como X, guest como O
-        const isHost = room.players[0].name === playerName;
-        const playerSymbol = isHost ? 'X' : 'O';
-        setIsMyTurn(gameState.currentPlayer === playerSymbol);
-      }
-    }
-  }, []);
+    const init = async () => {
+      const newStats = updateStatsOnGameStart();
+      setStats(newStats);
 
-  // Sincronização em tempo real para multiplayer
-  useEffect(() => {
-    if (!roomId || gameState.gameMode !== 'multiplayer') return;
-
-    const handleStorage = () => {
-      const currentTimestamp = getLastMoveTimestamp(roomId);
-      if (currentTimestamp > lastMoveTimestamp) {
-        const room = getRoom(roomId);
-        if (room && room.gameState) {
-          setGameState(room.gameState);
-          setLastMoveTimestamp(currentTimestamp);
-
+      if (roomId && gameState.gameMode === 'multiplayer') {
+        const room = await getRoom(roomId);
+        if (room) {
+          setRoomInfo(room);
           const isHost = room.players[0].name === playerName;
           const playerSymbol = isHost ? 'X' : 'O';
           setIsMyTurn(room.gameState.currentPlayer === playerSymbol);
@@ -66,9 +47,30 @@ const GameScreen: React.FC<GameScreenProps> = ({
       }
     };
 
-    window.addEventListener('storage', handleStorage);
+    void init();
+  }, []);
 
-    return () => window.removeEventListener('storage', handleStorage);
+  // Sincronização em tempo real para multiplayer
+  useEffect(() => {
+    if (!roomId || gameState.gameMode !== 'multiplayer') return;
+
+    const interval = setInterval(async () => {
+      const currentTimestamp = await getLastMoveTimestamp(roomId);
+      if (currentTimestamp > lastMoveTimestamp) {
+        const room = await getRoom(roomId);
+        if (room && room.gameState) {
+          setGameState(room.gameState);
+          setLastMoveTimestamp(currentTimestamp);
+          setRoomInfo(room);
+
+          const isHost = room.players[0].name === playerName;
+          const playerSymbol = isHost ? 'X' : 'O';
+          setIsMyTurn(room.gameState.currentPlayer === playerSymbol);
+        }
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
   }, [roomId, lastMoveTimestamp, playerName, gameState.gameMode]);
 
   useEffect(() => {
@@ -92,48 +94,44 @@ const GameScreen: React.FC<GameScreenProps> = ({
   }, [gameState]);
 
   useEffect(() => {
-    // Atualiza estatísticas quando o jogo termina
-    if (gameState.winner) {
-      const won = gameState.winner === 'X';
-      const newStats = updateStatsOnGameEnd(won);
-      setStats(newStats);
-      
-      if (gameState.gameMode === 'multiplayer' && roomId) {
-        const room = getRoom(roomId);
-        if (room) {
-          const isHost = room.players[0].name === playerName;
-          const playerSymbol = isHost ? 'X' : 'O';
-          const playerWon = gameState.winner === playerSymbol;
-          
-          if (playerWon) {
-            toast({
-              title: "🎉 Vitória!",
-              description: "Parabéns! Você venceu o jogo!",
-            });
-          } else {
-            toast({
-              title: "😞 Derrota",
-              description: "Não foi dessa vez. Tente novamente!",
-            });
-          }
-        }
-      } else if (gameState.gameMode === 'bot') {
-        if (won) {
-          toast({
-            title: "🎉 Vitória!",
-            description: "Parabéns! Você venceu o jogo!",
-          });
-        } else {
-          toast({
-            title: "😞 Derrota",
-            description: "Não foi dessa vez. Tente novamente!",
-          });
-        }
+    if (!gameState.winner) return;
+
+    const won = gameState.winner === 'X';
+    const newStats = updateStatsOnGameEnd(won);
+    setStats(newStats);
+
+    if (gameState.gameMode === 'multiplayer' && roomInfo) {
+      const isHost = roomInfo.players[0].name === playerName;
+      const playerSymbol = isHost ? 'X' : 'O';
+      const playerWon = gameState.winner === playerSymbol;
+
+      if (playerWon) {
+        toast({
+          title: "🎉 Vitória!",
+          description: "Parabéns! Você venceu o jogo!",
+        });
+      } else {
+        toast({
+          title: "😞 Derrota",
+          description: "Não foi dessa vez. Tente novamente!",
+        });
+      }
+    } else if (gameState.gameMode === 'bot') {
+      if (won) {
+        toast({
+          title: "🎉 Vitória!",
+          description: "Parabéns! Você venceu o jogo!",
+        });
+      } else {
+        toast({
+          title: "😞 Derrota",
+          description: "Não foi dessa vez. Tente novamente!",
+        });
       }
     }
-  }, [gameState.winner, gameState.gameMode, roomId, playerName]);
+  }, [gameState.winner, gameState.gameMode, roomInfo, playerName]);
 
-  const handleMove = (position: number) => {
+  const handleMove = async (position: number) => {
     if (gameState.board[position] !== null || gameState.winner) return;
     
     // Para multiplayer, verifica se é o turno do jogador
@@ -151,12 +149,12 @@ const GameScreen: React.FC<GameScreenProps> = ({
     
     // Se é multiplayer, sincroniza com a sala
     if (roomId && gameState.gameMode === 'multiplayer') {
-      updateRoomGameState(roomId, newGameState);
+      await updateRoomGameState(roomId, newGameState);
       setLastMoveTimestamp(Date.now());
-      
-      // Atualiza se é o turno do jogador
-      const room = getRoom(roomId);
+
+      const room = await getRoom(roomId);
       if (room) {
+        setRoomInfo(room);
         const isHost = room.players[0].name === playerName;
         const playerSymbol = isHost ? 'X' : 'O';
         setIsMyTurn(newGameState.currentPlayer === playerSymbol);
@@ -164,7 +162,7 @@ const GameScreen: React.FC<GameScreenProps> = ({
     }
   };
 
-  const resetGame = () => {
+  const resetGame = async () => {
     const newGameState: GameState = {
       ...initialGameState,
       board: Array(9).fill(null),
@@ -179,12 +177,12 @@ const GameScreen: React.FC<GameScreenProps> = ({
     
     // Se é multiplayer, sincroniza o reset
     if (roomId && gameState.gameMode === 'multiplayer') {
-      updateRoomGameState(roomId, newGameState);
+      await updateRoomGameState(roomId, newGameState);
       setLastMoveTimestamp(Date.now());
-      
-      // Atualiza se é o turno do jogador
-      const room = getRoom(roomId);
+
+      const room = await getRoom(roomId);
       if (room) {
+        setRoomInfo(room);
         const isHost = room.players[0].name === playerName;
         const playerSymbol = isHost ? 'X' : 'O';
         setIsMyTurn(newGameState.currentPlayer === playerSymbol);
@@ -210,15 +208,14 @@ const GameScreen: React.FC<GameScreenProps> = ({
     if (gameState.gameMode === 'bot') {
       return gameState.currentPlayer === 'X' ? playerName : 'Bot';
     }
-    
-    if (gameState.gameMode === 'multiplayer' && roomId) {
-      const room = getRoom(roomId);
-      if (room) {
-        const currentPlayerObj = room.players.find(p => p.symbol === gameState.currentPlayer);
-        return currentPlayerObj ? currentPlayerObj.name : 'Adversário';
-      }
+
+    if (gameState.gameMode === 'multiplayer' && roomInfo) {
+      const currentPlayerObj = roomInfo.players.find(
+        p => p.symbol === gameState.currentPlayer
+      );
+      return currentPlayerObj ? currentPlayerObj.name : 'Adversário';
     }
-    
+
     return gameState.currentPlayer === 'X' ? playerName : 'Adversário';
   };
 
@@ -231,15 +228,17 @@ const GameScreen: React.FC<GameScreenProps> = ({
 
   const getGameStatusMessage = () => {
     if (gameState.winner) {
-      if (gameState.gameMode === 'multiplayer' && roomId) {
-        const room = getRoom(roomId);
-        if (room) {
-          const winnerPlayer = room.players.find(p => p.symbol === gameState.winner);
-          return `${winnerPlayer?.name || 'Jogador'} Venceu!`;
-        }
+      if (gameState.gameMode === 'multiplayer' && roomInfo) {
+        const winnerPlayer = roomInfo.players.find(
+          p => p.symbol === gameState.winner
+        );
+        return `${winnerPlayer?.name || 'Jogador'} Venceu!`;
       }
-      return gameState.winner === 'X' ? `${playerName} Venceu!` : 
-             gameState.gameMode === 'bot' ? 'Bot Venceu!' : 'Adversário Venceu!';
+      return gameState.winner === 'X'
+        ? `${playerName} Venceu!`
+        : gameState.gameMode === 'bot'
+          ? 'Bot Venceu!'
+          : 'Adversário Venceu!';
     }
     
     if (gameState.gameMode === 'multiplayer') {
