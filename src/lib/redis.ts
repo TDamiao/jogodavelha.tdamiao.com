@@ -1,18 +1,39 @@
-const UPSTASH_URL = import.meta.env.VITE_UPSTASH_REDIS_REST_URL as string;
-const UPSTASH_TOKEN = import.meta.env.VITE_UPSTASH_REDIS_REST_TOKEN as string;
+let UPSTASH_URL = import.meta.env.VITE_UPSTASH_REDIS_REST_URL as string | undefined;
+let UPSTASH_TOKEN = import.meta.env.VITE_UPSTASH_REDIS_REST_TOKEN as string | undefined;
+
+// Allow using a single Upstash Redis URL like the one used with redis-cli
+// e.g. redis://default:token@host:6379
+if ((!UPSTASH_URL || !UPSTASH_TOKEN) && import.meta.env.VITE_UPSTASH_REDIS_URL) {
+  try {
+    const url = new URL(import.meta.env.VITE_UPSTASH_REDIS_URL as string);
+    UPSTASH_URL = `https://${url.hostname}`;
+    UPSTASH_TOKEN = url.password;
+  } catch (e) {
+    console.error('Invalid VITE_UPSTASH_REDIS_URL', e);
+  }
+}
 
 async function request<T>(path: string): Promise<T> {
+  if (!UPSTASH_URL || !UPSTASH_TOKEN) {
+    throw new Error('Upstash Redis credentials are not configured');
+  }
+
   const res = await fetch(`${UPSTASH_URL}/${path}`, {
     headers: {
       Authorization: `Bearer ${UPSTASH_TOKEN}`
     }
   });
-  return res.json();
+
+  if (!res.ok) {
+    throw new Error(`Upstash request failed with ${res.status}`);
+  }
+
+  return res.json() as Promise<T>;
 }
 
 export async function redisSet(key: string, value: string, ttlSeconds?: number): Promise<void> {
   const ex = ttlSeconds ? `?EX=${ttlSeconds}` : '';
-  await request(`set/${key}/${encodeURIComponent(value)}${ex}`);
+  await request<void>(`set/${key}/${encodeURIComponent(value)}${ex}`);
 }
 
 export async function redisGet(key: string): Promise<string | null> {
@@ -21,5 +42,5 @@ export async function redisGet(key: string): Promise<string | null> {
 }
 
 export async function redisDel(key: string): Promise<void> {
-  await request(`del/${key}`);
+  await request<void>(`del/${key}`);
 }
