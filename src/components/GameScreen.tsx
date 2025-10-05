@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, RotateCcw, Share2, Crown, Bot } from 'lucide-react';
@@ -30,11 +30,14 @@ const GameScreen: React.FC<GameScreenProps> = ({
   const [lastMoveTimestamp, setLastMoveTimestamp] = useState(0);
   const [isMyTurn, setIsMyTurn] = useState(true); // Para multiplayer
   const [roomInfo, setRoomInfo] = useState<Room | null>(null);
+  const hasReportedMatchFinished = useRef(false);
 
   useEffect(() => {
     const init = async () => {
       const newStats = updateStatsOnGameStart();
       setStats(newStats);
+
+      window.Android?.onMatchRestarted?.();
 
       if (roomId && gameState.gameMode === 'multiplayer') {
         const room = await getRoom(roomId);
@@ -48,7 +51,7 @@ const GameScreen: React.FC<GameScreenProps> = ({
     };
 
     void init();
-  }, []);
+  }, [gameState.gameMode, playerName, roomId]);
 
   // Sincronização em tempo real para multiplayer
   useEffect(() => {
@@ -73,25 +76,65 @@ const GameScreen: React.FC<GameScreenProps> = ({
     return () => clearInterval(interval);
   }, [roomId, lastMoveTimestamp, playerName, gameState.gameMode]);
 
+  const handleMove = useCallback(async (position: number) => {
+    if (gameState.board[position] !== null || gameState.winner) return;
+
+    // Para multiplayer, verifica se é o turno do jogador
+    if (gameState.gameMode === 'multiplayer' && !isMyTurn) {
+      toast({
+        title: "Não é sua vez!",
+        description: "Aguarde a jogada do adversário.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const newGameState = makeMove(gameState, position, gameState.currentPlayer);
+    setGameState(newGameState);
+
+    // Se é multiplayer, sincroniza com a sala
+    if (roomId && gameState.gameMode === 'multiplayer') {
+      await updateRoomGameState(roomId, newGameState);
+      setLastMoveTimestamp(Date.now());
+
+      const room = await getRoom(roomId);
+      if (room) {
+        setRoomInfo(room);
+        const isHost = room.players[0].name === playerName;
+        const playerSymbol = isHost ? 'X' : 'O';
+        setIsMyTurn(newGameState.currentPlayer === playerSymbol);
+      }
+    }
+  }, [gameState, isMyTurn, roomId, playerName]);
+
   useEffect(() => {
     // Bot faz sua jogada
-    if (gameState.gameMode === 'bot' && 
-        gameState.currentPlayer === 'O' && 
-        gameState.gameStatus === 'playing' && 
+    if (gameState.gameMode === 'bot' &&
+        gameState.currentPlayer === 'O' &&
+        gameState.gameStatus === 'playing' &&
         !gameState.winner) {
-      
+
       setIsThinking(true);
       const timer = setTimeout(() => {
         const botMove = getBestMove(gameState);
         if (botMove !== -1) {
-          handleMove(botMove);
+          void handleMove(botMove);
         }
         setIsThinking(false);
       }, 800);
 
       return () => clearTimeout(timer);
     }
-  }, [gameState]);
+  }, [gameState, handleMove]);
+
+  useEffect(() => {
+    if (gameState.gameStatus === 'finished' && !hasReportedMatchFinished.current) {
+      hasReportedMatchFinished.current = true;
+      window.Android?.onMatchFinished?.();
+    } else if (gameState.gameStatus !== 'finished') {
+      hasReportedMatchFinished.current = false;
+    }
+  }, [gameState.gameStatus]);
 
   useEffect(() => {
     if (!gameState.winner) return;
@@ -131,37 +174,6 @@ const GameScreen: React.FC<GameScreenProps> = ({
     }
   }, [gameState.winner, gameState.gameMode, roomInfo, playerName]);
 
-  const handleMove = async (position: number) => {
-    if (gameState.board[position] !== null || gameState.winner) return;
-    
-    // Para multiplayer, verifica se é o turno do jogador
-    if (gameState.gameMode === 'multiplayer' && !isMyTurn) {
-      toast({
-        title: "Não é sua vez!",
-        description: "Aguarde a jogada do adversário.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    const newGameState = makeMove(gameState, position, gameState.currentPlayer);
-    setGameState(newGameState);
-    
-    // Se é multiplayer, sincroniza com a sala
-    if (roomId && gameState.gameMode === 'multiplayer') {
-      await updateRoomGameState(roomId, newGameState);
-      setLastMoveTimestamp(Date.now());
-
-      const room = await getRoom(roomId);
-      if (room) {
-        setRoomInfo(room);
-        const isHost = room.players[0].name === playerName;
-        const playerSymbol = isHost ? 'X' : 'O';
-        setIsMyTurn(newGameState.currentPlayer === playerSymbol);
-      }
-    }
-  };
-
   const resetGame = async () => {
     const newGameState: GameState = {
       ...initialGameState,
@@ -172,8 +184,10 @@ const GameScreen: React.FC<GameScreenProps> = ({
       playerPositions: { X: [], O: [] },
       gameStatus: 'playing' as const
     };
-    
+
     setGameState(newGameState);
+    hasReportedMatchFinished.current = false;
+    window.Android?.onMatchRestarted?.();
     
     // Se é multiplayer, sincroniza o reset
     if (roomId && gameState.gameMode === 'multiplayer') {
