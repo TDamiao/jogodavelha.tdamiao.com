@@ -1,0 +1,10 @@
+{
+  "appId": "jogodavelha.tdamiao.com",
+  "appName": "Jogo da Velha Rob",
+  "webDir": "dist",
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": false
+    }
+  }
+}

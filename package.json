@@ -13,6 +13,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@capacitor/android": "^7.4.3",
+    "@capacitor/cli": "^7.4.3",
+    "@capacitor/core": "^7.4.3",
     "@hookform/resolvers": "^3.9.0",
     "@radix-ui/react-accordion": "^1.2.0",
     "@radix-ui/react-alert-dialog": "^1.1.1",
@@ -80,5 +83,18 @@
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.0.1",
     "vite": "^5.4.1"
-  }
+  },
+  "description": "Aplicação web do clássico jogo da velha construída com React, TypeScript e Vite. Agora o projeto também acompanha um wrapper Android nativo pronto para publicação na Play Store, com pontos de integração para anúncios do Google AdMob (banner fixo e intersticial entre partidas).",
+  "main": "eslint.config.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TDamiao/jogodavelha.tdamiao.com.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/TDamiao/jogodavelha.tdamiao.com/issues"
+  },
+  "homepage": "https://github.com/TDamiao/jogodavelha.tdamiao.com#readme"
 }

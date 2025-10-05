@@ -1,6 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Jogo da Velha</string>
-    <string name="admob_app_id">ca-app-pub-3962525960228971~8235282158</string>
-    <string name="admob_banner_unit_id">ca-app-pub-3962525960228971/7301474434</string>
-    <string name="admob_interstitial_unit_id">ca-app-pub-3962525960228971/2512289987</string>
+    <string name="app_name">jogo da velha rob</string>
+    <string name="title_activity_main">jogo da velha rob</string>
+    <string name="package_name">jogodavelha.tdamiao.com</string>
+    <string name="custom_url_scheme">jogodavelha.tdamiao.com</string>
 </resources>
