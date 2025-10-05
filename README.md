@@ -49,17 +49,17 @@ Compartilhe o link da sala com um amigo para jogar online.
 2. Abra a pasta `android/` no Android Studio. A IDE baixará as dependências e
    criará o gradle wrapper automaticamente (caso ainda não exista no repositório).
 
-3. Configure os IDs de anúncio reais no arquivo `android/app/src/main/res/values/strings.xml`:
+3. Os IDs de anúncio oficiais já estão configurados em
+   `android/app/src/main/res/values/strings.xml`:
 
    ```xml
-   <string name="admob_app_id">SEU_APP_ID</string>
-   <string name="admob_banner_unit_id">SEU_BANNER_ID</string>
-   <string name="admob_interstitial_unit_id">SEU_INTERSTITIAL_ID</string>
+   <string name="admob_app_id">ca-app-pub-3962525960228971~8235282158</string>
+   <string name="admob_banner_unit_id">ca-app-pub-3962525960228971/7301474434</string>
+   <string name="admob_interstitial_unit_id">ca-app-pub-3962525960228971/2512289987</string>
    ```
 
-   Os valores atuais são IDs de teste fornecidos pelo Google e não geram receita,
-   mas são obrigatórios durante o desenvolvimento para evitar violações das
-   políticas de anúncios.
+   Caso precise trocar por outros blocos, atualize estes valores antes de gerar
+   a versão de release.
 
 4. Ajuste as informações de versão/assinatura em `android/app/build.gradle.kts`
    conforme as exigências de publicação (versionCode, versionName e assinatura
