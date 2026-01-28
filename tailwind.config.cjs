@@ -54,9 +54,9 @@ module.exports = {
           foreground: "hsl(var(--card-foreground))",
         },
         // Custom game colors
-        // "game-player1": "hsl(var(--game-player1))",
-        // "game-player2": "hsl(var(--game-player2))",
-        // "game-bot": "hsl(var(--game-bot))",
+        "game-player1": "hsl(var(--game-player1))",
+        "game-player2": "hsl(var(--game-player2))",
+        "game-bot": "hsl(var(--game-bot))",
       },
       borderRadius: {
         lg: `var(--radius)`,
