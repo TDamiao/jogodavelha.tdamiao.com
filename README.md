@@ -78,6 +78,29 @@ Para executar o projeto localmente, siga os passos abaixo:
 
     A aplicação estará disponível em `http://localhost:5173`.
 
+## Redis e keep-alive
+
+Copie as variáveis de `.env.example` para `.env.local`. O navegador acessa somente as
+funções serverless em `/api`; as credenciais do Redis ficam disponíveis exclusivamente
+no servidor.
+
+O comando abaixo atualiza a chave `system:keep-alive` no Upstash:
+
+```bash
+npm run redis:keep-alive
+```
+
+O workflow `.github/workflows/redis-keep-alive.yml` executa esse comando nos dias 1, 11,
+21 e 31 de cada mês. Cadastre `UPSTASH_REDIS_REST_URL` e
+`UPSTASH_REDIS_REST_TOKEN` como secrets do repositório no GitHub para habilitá-lo.
+
+No projeto da Vercel, cadastre também `UPSTASH_REDIS_REST_URL` e
+`UPSTASH_REDIS_REST_TOKEN` em **Settings > Environment Variables**. Essas variáveis da
+Vercel alimentam a API e são diferentes dos repository secrets usados pelo GitHub Actions.
+
+Para executar aplicação e API localmente, use `vercel dev`. O comando `npm run dev`
+executa apenas o frontend Vite.
+
 ## 🤝 Como Contribuir
 
 Contribuições da comunidade são muito bem-vindas! Se você tem alguma ideia para melhorar o projeto, encontrou um bug ou quer adicionar uma nova funcionalidade, sinta-se à vontade para:

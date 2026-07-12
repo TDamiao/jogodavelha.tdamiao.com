@@ -2,62 +2,69 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Share2, Users, Clock } from 'lucide-react';
+import { ArrowLeft, Share2, Users } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { checkRoomReady, getRoom } from '../utils/roomManager';
+import { getRoom } from '../utils/roomManager';
 import RoomInfoCard from './RoomInfoCard';
 import GameInstructions from './GameInstructions';
+import type { Room } from '../types/game';
 
 interface WaitingRoomHostProps {
   roomId: string;
-  hostName: string;
   onBack: () => void;
-  onGameStart: () => void;
+  onGameStart: (room: Room) => void;
 }
 
 const WaitingRoomHost: React.FC<WaitingRoomHostProps> = ({ 
   roomId, 
-  hostName, 
   onBack, 
   onGameStart
 }) => {
   const [waitingTime, setWaitingTime] = useState(0);
+  const [isStarting, setIsStarting] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(async () => {
       setWaitingTime(prev => prev + 1);
 
-      if (await checkRoomReady(roomId)) {
+      try {
         const room = await getRoom(roomId);
-        if (room && room.players.length === 2) {
+        if (room.players.length === 2 && !isStarting) {
+          setIsStarting(true);
           toast({
             title: "Jogador conectado!",
             description: `${room.players[1].name} entrou na sala. Iniciando jogo...`,
           });
           setTimeout(() => {
-            onGameStart();
+            onGameStart(room);
           }, 1000);
         }
+      } catch (error) {
+        console.error('Erro ao consultar sala', error);
       }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [roomId, onGameStart]);
+  }, [roomId, onGameStart, isStarting]);
 
   const shareRoomLink = () => {
     const url = `${window.location.origin}?room=${roomId}`;
-    navigator.clipboard.writeText(url);
-    toast({
-      title: "Link copiado!",
-      description: "Compartilhe este link com seu amigo para começar o jogo.",
+    void navigator.clipboard.writeText(url).then(() => {
+      toast({
+        title: "Link copiado!",
+        description: "Compartilhe este link com seu amigo para começar o jogo.",
+      });
+    }).catch(() => {
+      toast({
+        title: 'Não foi possível copiar',
+        description: url,
+        variant: 'destructive',
+      });
     });
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4 relative">
-      <div className="absolute inset-0 opacity-20">
-        <div className="h-full w-full bg-gradient-to-r from-transparent via-blue-500/10 to-transparent"></div>
-      </div>
+    <div className="min-h-screen bg-zinc-950 p-4 relative">
       
       <div className="max-w-2xl mx-auto space-y-6 relative z-10">
         <div className="flex items-center justify-between">
@@ -74,7 +81,7 @@ const WaitingRoomHost: React.FC<WaitingRoomHostProps> = ({
         <Card className="bg-card/90 backdrop-blur-sm border-border/50 text-center">
           <CardHeader>
             <div className="flex justify-center mb-4">
-              <div className="bg-gradient-to-r from-purple-500 to-pink-600 p-4 rounded-2xl">
+              <div className="bg-rose-600 p-4 rounded-lg shadow-lg shadow-rose-950/40">
                 <Users className="w-12 h-12 text-white" />
               </div>
             </div>
@@ -90,7 +97,7 @@ const WaitingRoomHost: React.FC<WaitingRoomHostProps> = ({
             <div className="space-y-3">
               <Button 
                 onClick={shareRoomLink}
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-lg py-6"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-lg py-6"
               >
                 <Share2 className="w-5 h-5 mr-2" />
                 Compartilhar Link da Sala

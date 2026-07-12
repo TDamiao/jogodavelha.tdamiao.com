@@ -1,97 +1,87 @@
-import { Room, Player, GameState } from '../types/game';
-import { createInitialGameState } from './gameLogic';
-import { redisSet, redisGet, redisDel } from '../lib/redis';
+import type { Room } from '../types/game';
 
-const ROOM_PREFIX = 'room:';
-const TTL_SECONDS = 60 * 60; // 1 hour
-
-export const generateRoomId = (): string => {
-  return Math.random().toString(36).substr(2, 8).toUpperCase();
-};
-
-export const createRoom = async (hostName: string): Promise<Room> => {
-  const roomId = generateRoomId();
-  const host: Player = {
-    id: '1',
-    name: hostName,
-    symbol: 'X',
-    isReady: true
-  };
-
-  const room: Room = {
-    id: roomId,
-    players: [host],
-    gameState: createInitialGameState('multiplayer'),
-    createdAt: Date.now()
-  };
-
-  await saveRoom(room);
-  return room;
-};
-
-export const saveRoom = async (room: Room): Promise<void> => {
-  await redisSet(`${ROOM_PREFIX}${room.id}`, JSON.stringify(room), TTL_SECONDS);
-};
-
-export const getRoom = async (roomId: string): Promise<Room | null> => {
-  const data = await redisGet(`${ROOM_PREFIX}${roomId}`);
-  return data ? JSON.parse(data) : null;
-};
-
-export const verifyRoomExists = async (roomId: string): Promise<boolean> => {
-  const data = await redisGet(`${ROOM_PREFIX}${roomId}`);
-  return data !== null;
-};
-
-export const joinRoom = async (roomId: string, playerName: string): Promise<Room | null> => {
-  const room = await getRoom(roomId);
-  if (!room) return null;
-  if (room.players.length >= 2) return null;
-
-  const existingPlayer = room.players.find(p => p.name === playerName);
-  if (existingPlayer) return room;
-
-  const guest: Player = {
-    id: '2',
-    name: playerName,
-    symbol: 'O',
-    isReady: true
-  };
-
-  room.players.push(guest);
-  room.gameState.gameStatus = 'playing';
-
-  await saveRoom(room);
-  await redisSet(`${ROOM_PREFIX}${roomId}:ready`, 'true', TTL_SECONDS);
-
-  return room;
-};
-
-export const updateRoomGameState = async (roomId: string, gameState: GameState): Promise<void> => {
-  const room = await getRoom(roomId);
-  if (room) {
-    room.gameState = gameState;
-    await saveRoom(room);
-    await redisSet(`${ROOM_PREFIX}${roomId}:lastMove`, Date.now().toString(), TTL_SECONDS);
+export class RoomApiError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
   }
-};
+}
 
-export const getLastMoveTimestamp = async (roomId: string): Promise<number> => {
-  const ts = await redisGet(`${ROOM_PREFIX}${roomId}:lastMove`);
-  return ts ? parseInt(ts) : 0;
-};
+interface RoomSessionResponse {
+  room: Room;
+  playerToken: string;
+}
 
-export const checkRoomReady = async (roomId: string): Promise<boolean> => {
-  const ready = await redisGet(`${ROOM_PREFIX}${roomId}:ready`);
-  return ready === 'true';
-};
+async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(path, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      ...init?.headers,
+    },
+  });
 
-export const cleanupOldRooms = async (): Promise<void> => {
-  // TTL handles cleanup automatically
-};
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({ error: 'Falha ao comunicar com o servidor' }));
+    throw new RoomApiError(response.status, data.error ?? 'Falha ao comunicar com o servidor');
+  }
 
-export const deleteRoom = async (roomId: string): Promise<void> => {
-  await redisDel(`${ROOM_PREFIX}${roomId}`);
-  await redisDel(`${ROOM_PREFIX}${roomId}:ready`);
-  await redisDel(`${ROOM_PREFIX}${roomId}:lastMove`);
-};
+  if (response.status === 204) return undefined as T;
+  return response.json() as Promise<T>;
+}
+
+function authorization(token: string): HeadersInit {
+  return { Authorization: `Bearer ${token}` };
+}
+
+export async function createRoom(hostName: string): Promise<RoomSessionResponse> {
+  return apiRequest('/api/rooms', {
+    method: 'POST',
+    body: JSON.stringify({ hostName }),
+  });
+}
+
+export async function getRoom(roomId: string): Promise<Room> {
+  const result = await apiRequest<{ room: Room }>(`/api/rooms/${encodeURIComponent(roomId)}`);
+  return result.room;
+}
+
+export async function verifyRoomExists(roomId: string): Promise<boolean> {
+  try {
+    await getRoom(roomId);
+    return true;
+  } catch (error) {
+    if (error instanceof RoomApiError && error.status === 404) return false;
+    throw error;
+  }
+}
+
+export async function joinRoom(roomId: string, playerName: string): Promise<RoomSessionResponse> {
+  return apiRequest(`/api/rooms/${encodeURIComponent(roomId)}/join`, {
+    method: 'POST',
+    body: JSON.stringify({ playerName }),
+  });
+}
+
+export async function playRoomMove(roomId: string, token: string, position: number): Promise<Room> {
+  const result = await apiRequest<{ room: Room }>(`/api/rooms/${encodeURIComponent(roomId)}/move`, {
+    method: 'POST',
+    headers: authorization(token),
+    body: JSON.stringify({ position }),
+  });
+  return result.room;
+}
+
+export async function resetRoom(roomId: string, token: string): Promise<Room> {
+  const result = await apiRequest<{ room: Room }>(`/api/rooms/${encodeURIComponent(roomId)}/reset`, {
+    method: 'POST',
+    headers: authorization(token),
+  });
+  return result.room;
+}
+
+export async function deleteRoom(roomId: string, token: string): Promise<void> {
+  await apiRequest(`/api/rooms/${encodeURIComponent(roomId)}`, {
+    method: 'DELETE',
+    headers: authorization(token),
+  });
+}

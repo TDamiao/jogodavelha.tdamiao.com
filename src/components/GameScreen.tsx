@@ -6,31 +6,33 @@ import { ArrowLeft, RotateCcw, Share2, Crown, Bot } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import GameBoard from './GameBoard';
 import GameStats from './GameStats';
-import { GameState, GameStats as GameStatsType, Room } from '../types/game';
+import { GameState, GameStats as GameStatsType, PlayerSession, Room } from '../types/game';
 import { makeMove, getBestMove } from '../utils/gameLogic';
 import { updateStatsOnGameStart, updateStatsOnGameEnd, getStats } from '../utils/statsManager';
-import { updateRoomGameState, getRoom, getLastMoveTimestamp } from '../utils/roomManager';
+import { getRoom, playRoomMove, resetRoom } from '../utils/roomManager';
 
 interface GameScreenProps {
   initialGameState: GameState;
   playerName: string;
   onBack: () => void;
   roomId?: string;
+  playerSession?: PlayerSession;
 }
 
 const GameScreen: React.FC<GameScreenProps> = ({ 
   initialGameState, 
   playerName, 
   onBack,
-  roomId 
+  roomId,
+  playerSession,
 }) => {
   const [gameState, setGameState] = useState<GameState>(initialGameState);
   const [stats, setStats] = useState<GameStatsType>(getStats());
   const [isThinking, setIsThinking] = useState(false);
-  const [lastMoveTimestamp, setLastMoveTimestamp] = useState(0);
   const [isMyTurn, setIsMyTurn] = useState(true); // Para multiplayer
   const [roomInfo, setRoomInfo] = useState<Room | null>(null);
   const hasReportedMatchFinished = useRef(false);
+  const hasRecordedStats = useRef(false);
 
   useEffect(() => {
     const init = async () => {
@@ -43,38 +45,47 @@ const GameScreen: React.FC<GameScreenProps> = ({
         const room = await getRoom(roomId);
         if (room) {
           setRoomInfo(room);
-          const isHost = room.players[0].name === playerName;
-          const playerSymbol = isHost ? 'X' : 'O';
-          setIsMyTurn(room.gameState.currentPlayer === playerSymbol);
+          setGameState(room.gameState);
+          setIsMyTurn(room.gameState.currentPlayer === playerSession?.symbol);
         }
       }
     };
 
     void init();
-  }, [gameState.gameMode, playerName, roomId]);
+  }, [gameState.gameMode, roomId, playerSession?.symbol]);
 
   // Sincronização em tempo real para multiplayer
   useEffect(() => {
     if (!roomId || gameState.gameMode !== 'multiplayer') return;
 
-    const interval = setInterval(async () => {
-      const currentTimestamp = await getLastMoveTimestamp(roomId);
-      if (currentTimestamp > lastMoveTimestamp) {
-        const room = await getRoom(roomId);
-        if (room && room.gameState) {
-          setGameState(room.gameState);
-          setLastMoveTimestamp(currentTimestamp);
-          setRoomInfo(room);
+    let cancelled = false;
+    let timeout: ReturnType<typeof setTimeout>;
 
-          const isHost = room.players[0].name === playerName;
-          const playerSymbol = isHost ? 'X' : 'O';
-          setIsMyTurn(room.gameState.currentPlayer === playerSymbol);
+    const poll = async () => {
+      try {
+        const room = await getRoom(roomId);
+        if (!cancelled && room.version !== roomInfo?.version) {
+          setGameState(room.gameState);
+          setRoomInfo(room);
+          setIsMyTurn(room.gameState.currentPlayer === playerSession?.symbol);
+        }
+      } catch (error) {
+        console.error('Erro ao sincronizar sala', error);
+      } finally {
+        if (!cancelled) {
+          const delay = document.visibilityState === 'hidden' ? 5000 : 1500;
+          timeout = setTimeout(poll, delay);
         }
       }
-    }, 1000);
+    };
 
-    return () => clearInterval(interval);
-  }, [roomId, lastMoveTimestamp, playerName, gameState.gameMode]);
+    void poll();
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [roomId, roomInfo?.version, playerSession?.symbol, gameState.gameMode]);
 
   const handleMove = useCallback(async (position: number) => {
     if (gameState.board[position] !== null || gameState.winner) return;
@@ -89,23 +100,24 @@ const GameScreen: React.FC<GameScreenProps> = ({
       return;
     }
 
-    const newGameState = makeMove(gameState, position, gameState.currentPlayer);
-    setGameState(newGameState);
-
-    // Se é multiplayer, sincroniza com a sala
-    if (roomId && gameState.gameMode === 'multiplayer') {
-      await updateRoomGameState(roomId, newGameState);
-      setLastMoveTimestamp(Date.now());
-
-      const room = await getRoom(roomId);
-      if (room) {
+    if (roomId && playerSession && gameState.gameMode === 'multiplayer') {
+      try {
+        const room = await playRoomMove(roomId, playerSession.token, position);
+        setGameState(room.gameState);
         setRoomInfo(room);
-        const isHost = room.players[0].name === playerName;
-        const playerSymbol = isHost ? 'X' : 'O';
-        setIsMyTurn(newGameState.currentPlayer === playerSymbol);
+        setIsMyTurn(room.gameState.currentPlayer === playerSession.symbol);
+      } catch (error) {
+        toast({
+          title: 'Jogada não realizada',
+          description: error instanceof Error ? error.message : 'Tente novamente.',
+          variant: 'destructive',
+        });
       }
+      return;
     }
-  }, [gameState, isMyTurn, roomId, playerName]);
+
+    setGameState(makeMove(gameState, position, gameState.currentPlayer));
+  }, [gameState, isMyTurn, roomId, playerSession]);
 
   useEffect(() => {
     // Bot faz sua jogada
@@ -137,16 +149,16 @@ const GameScreen: React.FC<GameScreenProps> = ({
   }, [gameState.gameStatus]);
 
   useEffect(() => {
-    if (!gameState.winner) return;
+    if (!gameState.winner || hasRecordedStats.current) return;
+    hasRecordedStats.current = true;
 
-    const won = gameState.winner === 'X';
+    const playerSymbol = gameState.gameMode === 'multiplayer' ? playerSession?.symbol : 'X';
+    const won = gameState.winner === playerSymbol;
     const newStats = updateStatsOnGameEnd(won);
     setStats(newStats);
 
     if (gameState.gameMode === 'multiplayer' && roomInfo) {
-      const isHost = roomInfo.players[0].name === playerName;
-      const playerSymbol = isHost ? 'X' : 'O';
-      const playerWon = gameState.winner === playerSymbol;
+      const playerWon = won;
 
       if (playerWon) {
         toast({
@@ -172,7 +184,7 @@ const GameScreen: React.FC<GameScreenProps> = ({
         });
       }
     }
-  }, [gameState.winner, gameState.gameMode, roomInfo, playerName]);
+  }, [gameState.winner, gameState.gameMode, roomInfo, playerSession?.symbol]);
 
   const resetGame = async () => {
     const newGameState: GameState = {
@@ -185,22 +197,27 @@ const GameScreen: React.FC<GameScreenProps> = ({
       gameStatus: 'playing' as const
     };
 
-    setGameState(newGameState);
     hasReportedMatchFinished.current = false;
+    hasRecordedStats.current = false;
     window.Android?.onMatchRestarted?.();
     
     // Se é multiplayer, sincroniza o reset
-    if (roomId && gameState.gameMode === 'multiplayer') {
-      await updateRoomGameState(roomId, newGameState);
-      setLastMoveTimestamp(Date.now());
-
-      const room = await getRoom(roomId);
-      if (room) {
+    if (roomId && playerSession && gameState.gameMode === 'multiplayer') {
+      try {
+        const room = await resetRoom(roomId, playerSession.token);
+        setGameState(room.gameState);
         setRoomInfo(room);
-        const isHost = room.players[0].name === playerName;
-        const playerSymbol = isHost ? 'X' : 'O';
-        setIsMyTurn(newGameState.currentPlayer === playerSymbol);
+        setIsMyTurn(room.gameState.currentPlayer === playerSession.symbol);
+      } catch (error) {
+        toast({
+          title: 'Não foi possível reiniciar',
+          description: error instanceof Error ? error.message : 'Tente novamente.',
+          variant: 'destructive',
+        });
+        return;
       }
+    } else {
+      setGameState(newGameState);
     }
     
     const newStats = updateStatsOnGameStart();
@@ -210,10 +227,17 @@ const GameScreen: React.FC<GameScreenProps> = ({
   const shareRoom = () => {
     if (roomId) {
       const url = `${window.location.origin}?room=${roomId}`;
-      navigator.clipboard.writeText(url);
-      toast({
-        title: "Link copiado!",
-        description: "Compartilhe este link com seu amigo para jogar juntos.",
+      void navigator.clipboard.writeText(url).then(() => {
+        toast({
+          title: "Link copiado!",
+          description: "Compartilhe este link com seu amigo para jogar juntos.",
+        });
+      }).catch(() => {
+        toast({
+          title: 'Não foi possível copiar',
+          description: url,
+          variant: 'destructive',
+        });
       });
     }
   };
@@ -263,7 +287,7 @@ const GameScreen: React.FC<GameScreenProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
+    <div className="min-h-screen bg-zinc-950 p-4">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">

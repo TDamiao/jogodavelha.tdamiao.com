@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import StartScreen from '../components/StartScreen';
 import GameScreen from '../components/GameScreen';
 import WaitingRoom from '../components/WaitingRoom';
-import { GameState } from '../types/game';
+import { GameState, PlayerSession, Room } from '../types/game';
 import { createInitialGameState } from '../utils/gameLogic';
-import { createRoom, cleanupOldRooms, deleteRoom } from '../utils/roomManager';
+import { createRoom, deleteRoom } from '../utils/roomManager';
 
 type AppState = 'start' | 'waiting' | 'game' | 'joining';
 
@@ -13,19 +13,15 @@ const Index = () => {
   const [playerName, setPlayerName] = useState('');
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [roomId, setRoomId] = useState<string | null>(null);
-  const [isGuest, setIsGuest] = useState(false);
+  const [playerSession, setPlayerSession] = useState<PlayerSession | null>(null);
 
   useEffect(() => {
-    // Limpa salas antigas ao carregar
-    void cleanupOldRooms();
-
     // Verifica se há um parâmetro de sala na URL
     const urlParams = new URLSearchParams(window.location.search);
     const roomParam = urlParams.get('room');
 
     if (roomParam) {
       setRoomId(roomParam);
-      setIsGuest(true);
       setAppState('joining');
     }
   }, []);
@@ -40,9 +36,9 @@ const Index = () => {
     } else {
       // Modo multiplayer - criar sala
       try {
-        const room = await createRoom(name);
+        const { room, playerToken } = await createRoom(name);
         setRoomId(room.id);
-        setIsGuest(false);
+        setPlayerSession({ token: playerToken, symbol: 'X', isHost: true });
         setAppState('waiting');
       } catch (err) {
         console.error('Erro ao criar sala', err);
@@ -51,23 +47,27 @@ const Index = () => {
     }
   };
 
-  const handleJoinGame = (name: string) => {
+  const handleJoinGame = (room: Room, name?: string, playerToken?: string) => {
+    if (!name || !playerToken) return;
     setPlayerName(name);
-    // Simula entrada na sala como convidado
-    const initialState = createInitialGameState('multiplayer');
-    setGameState(initialState);
+    setPlayerSession({ token: playerToken, symbol: 'O', isHost: false });
+    setGameState(room.gameState);
     setAppState('game');
   };
 
   const handleBackToStart = async () => {
-    if (roomId) {
-      await deleteRoom(roomId);
+    if (roomId && playerSession?.isHost) {
+      try {
+        await deleteRoom(roomId, playerSession.token);
+      } catch (error) {
+        console.error('Erro ao encerrar sala', error);
+      }
     }
     setAppState('start');
     setPlayerName('');
     setGameState(null);
     setRoomId(null);
-    setIsGuest(false);
+    setPlayerSession(null);
 
     // Remove parâmetro da URL se existir
     const url = new URL(window.location.href);
@@ -75,9 +75,8 @@ const Index = () => {
     window.history.replaceState({}, '', url.toString());
   };
 
-  const handleGameStart = () => {
-    const initialState = createInitialGameState('multiplayer');
-    setGameState(initialState);
+  const handleGameStart = (room: Room) => {
+    setGameState(room.gameState);
     setAppState('game');
   };
 
@@ -89,7 +88,6 @@ const Index = () => {
     return (
       <WaitingRoom
         roomId={roomId}
-        hostName=""
         onBack={handleBackToStart}
         onGameStart={handleJoinGame}
         isGuest={true}
@@ -101,7 +99,6 @@ const Index = () => {
     return (
       <WaitingRoom
         roomId={roomId}
-        hostName={playerName}
         onBack={handleBackToStart}
         onGameStart={handleGameStart}
         isGuest={false}
@@ -116,6 +113,7 @@ const Index = () => {
         playerName={playerName}
         onBack={handleBackToStart}
         roomId={roomId || undefined}
+        playerSession={playerSession || undefined}
       />
     );
   }

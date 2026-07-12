@@ -44,7 +44,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onCellClick, disabled 
   };
 
   return (
-    <div className="grid grid-cols-3 gap-3 p-6 bg-card/30 backdrop-blur-sm rounded-2xl border border-border/50">
+    <div className="grid grid-cols-3 gap-3 p-6 bg-card/30 backdrop-blur-sm rounded-lg border border-border/50">
       {board.map((_, index) => (
         <button
           key={index}

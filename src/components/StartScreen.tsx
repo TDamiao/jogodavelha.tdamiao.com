@@ -23,19 +23,16 @@ const StartScreen: React.FC<StartScreenProps> = ({ onStartGame }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4 relative">
-      <div className="absolute inset-0 opacity-20">
-        <div className="h-full w-full bg-gradient-to-r from-transparent via-blue-500/10 to-transparent"></div>
-      </div>
+    <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4 relative">
       
       <Card className="w-full max-w-md bg-card/90 backdrop-blur-sm border-border/50 shadow-2xl animate-slide-in relative z-10">
         <CardHeader className="text-center pb-2">
           <div className="flex justify-center mb-4">
-            <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-4 rounded-2xl">
+            <div className="bg-blue-600 p-4 rounded-lg shadow-lg shadow-blue-950/40">
               <Trophy className="w-12 h-12 text-white" />
             </div>
           </div>
-          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+          <CardTitle className="text-3xl font-bold text-foreground">
             Jogo da Velha
           </CardTitle>
           <p className="text-muted-foreground text-sm mt-2">
@@ -63,7 +60,7 @@ const StartScreen: React.FC<StartScreenProps> = ({ onStartGame }) => {
           <div className="grid grid-cols-1 gap-3">
             <Button
               onClick={() => handleSubmit('bot')}
-              className="h-16 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 
+              className="h-16 bg-blue-600 hover:bg-blue-700
                          text-white font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-200
                          hover:scale-105"
               disabled={!playerName.trim()}
@@ -77,7 +74,7 @@ const StartScreen: React.FC<StartScreenProps> = ({ onStartGame }) => {
             
             <Button
               onClick={() => handleSubmit('multiplayer')}
-              className="h-16 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 
+              className="h-16 bg-rose-600 hover:bg-rose-700
                          text-white font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-200
                          hover:scale-105"
               disabled={!playerName.trim()}

@@ -37,4 +37,12 @@ export interface Room {
   players: Player[];
   gameState: GameState;
   createdAt: number;
+  updatedAt: number;
+  version: number;
+}
+
+export interface PlayerSession {
+  token: string;
+  symbol: 'X' | 'O';
+  isHost: boolean;
 }

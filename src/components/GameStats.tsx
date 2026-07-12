@@ -58,12 +58,12 @@ const GameStats: React.FC<GameStatsProps> = ({ stats, currentGameTime }) => {
       <Card className="stats-card">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
-            <Clock className="w-4 h-4 text-purple-500" />
+            <Clock className="w-4 h-4 text-amber-500" />
             Tempo Atual
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
-          <div className="text-2xl font-bold text-purple-500">
+          <div className="text-2xl font-bold text-amber-500">
             {formatTime(displayTime)}
           </div>
           <div className="text-xs text-muted-foreground">
