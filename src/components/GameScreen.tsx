@@ -8,7 +8,7 @@ import GameStats from './GameStats';
 import { GameState, GameStats as GameStatsType, PlayerSession, Room } from '../types/game';
 import { makeMove, getBestMove } from '../utils/gameLogic';
 import { updateStatsOnGameStart, updateStatsOnGameEnd, getStats } from '../utils/statsManager';
-import { getRoom, playRoomMove, resetRoom } from '../utils/roomManager';
+import { getRoom, playRoomMove, resetRoom, RoomApiError } from '../utils/roomManager';
 
 interface GameScreenProps {
   initialGameState: GameState;
@@ -16,6 +16,7 @@ interface GameScreenProps {
   onBack: () => void;
   roomId?: string;
   playerSession?: PlayerSession;
+  onOpponentLeft: () => void;
 }
 
 const GameScreen: React.FC<GameScreenProps> = ({ 
@@ -24,6 +25,7 @@ const GameScreen: React.FC<GameScreenProps> = ({
   onBack,
   roomId,
   playerSession,
+  onOpponentLeft,
 }) => {
   const [gameState, setGameState] = useState<GameState>(initialGameState);
   const [stats, setStats] = useState<GameStatsType>(getStats());
@@ -63,12 +65,30 @@ const GameScreen: React.FC<GameScreenProps> = ({
     const poll = async () => {
       try {
         const room = await getRoom(roomId);
+        if (!cancelled && room.players.length < 2 && roomInfo && roomInfo.players.length === 2) {
+          toast({
+            title: 'Seu adversário saiu da sala',
+            description: playerSession?.isHost
+              ? 'A sala continua aberta para um novo desafio.'
+              : 'A partida foi encerrada pelo host.',
+          });
+          onOpponentLeft();
+          return;
+        }
         if (!cancelled && room.version !== roomInfo?.version) {
           setGameState(room.gameState);
           setRoomInfo(room);
           setIsMyTurn(room.gameState.currentPlayer === playerSession?.symbol);
         }
       } catch (error) {
+        if (error instanceof RoomApiError && error.status === 404) {
+          toast({
+            title: 'A sala foi encerrada',
+            description: 'O host saiu da partida.',
+          });
+          onOpponentLeft();
+          return;
+        }
         console.error('Erro ao sincronizar sala', error);
       } finally {
         if (!cancelled) {
@@ -84,7 +104,7 @@ const GameScreen: React.FC<GameScreenProps> = ({
       cancelled = true;
       clearTimeout(timeout);
     };
-  }, [roomId, roomInfo?.version, playerSession?.symbol, gameState.gameMode]);
+  }, [roomId, roomInfo, playerSession, gameState.gameMode, onOpponentLeft]);
 
   const handleMove = useCallback(async (position: number) => {
     if (gameState.board[position] !== null || gameState.winner) return;

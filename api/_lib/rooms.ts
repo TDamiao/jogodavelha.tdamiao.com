@@ -184,3 +184,23 @@ export async function deleteRoom(roomId: string, token: string): Promise<void> {
     await getRedis().del(roomKey(roomId));
   });
 }
+
+export async function leaveRoom(roomId: string, token: string): Promise<'closed' | 'left'> {
+  return withRoomLock(roomId, async () => {
+    const room = await getStoredRoom(roomId);
+    if (!room) return 'closed';
+    const symbol = authenticate(room, token);
+
+    if (symbol === 'X') {
+      await getRedis().del(roomKey(roomId));
+      return 'closed';
+    }
+
+    room.players = room.players.filter(player => player.symbol !== symbol);
+    delete room.sessions[token];
+    room.gameState = createInitialGameState('multiplayer');
+    room.gameState.gameStatus = 'waiting';
+    await saveStoredRoom(room);
+    return 'left';
+  });
+}

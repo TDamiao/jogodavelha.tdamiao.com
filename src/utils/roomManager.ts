@@ -85,3 +85,11 @@ export async function deleteRoom(roomId: string, token: string): Promise<void> {
     headers: authorization(token),
   });
 }
+
+export async function leaveRoom(roomId: string, token: string, keepalive = false): Promise<void> {
+  await apiRequest(`/api/rooms/${encodeURIComponent(roomId)}/leave`, {
+    method: 'POST',
+    headers: authorization(token),
+    keepalive,
+  });
+}

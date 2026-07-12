@@ -4,7 +4,7 @@ import GameScreen from '../components/GameScreen';
 import WaitingRoom from '../components/WaitingRoom';
 import { GameState, PlayerSession, Room } from '../types/game';
 import { createInitialGameState } from '../utils/gameLogic';
-import { createRoom, deleteRoom } from '../utils/roomManager';
+import { createRoom, deleteRoom, leaveRoom } from '../utils/roomManager';
 
 type AppState = 'start' | 'waiting' | 'game' | 'joining';
 
@@ -25,6 +25,15 @@ const Index = () => {
       setAppState('joining');
     }
   }, []);
+
+  useEffect(() => {
+    if (!roomId || !playerSession) return;
+    const notifyExit = () => {
+      void leaveRoom(roomId, playerSession.token, true).catch(() => undefined);
+    };
+    window.addEventListener('pagehide', notifyExit);
+    return () => window.removeEventListener('pagehide', notifyExit);
+  }, [roomId, playerSession]);
 
   const handleStartGame = async (name: string, mode: 'bot' | 'multiplayer') => {
     setPlayerName(name);
@@ -62,6 +71,12 @@ const Index = () => {
       } catch (error) {
         console.error('Erro ao encerrar sala', error);
       }
+    } else if (roomId && playerSession) {
+      try {
+        await leaveRoom(roomId, playerSession.token);
+      } catch (error) {
+        console.error('Erro ao sair da sala', error);
+      }
     }
     setAppState('start');
     setPlayerName('');
@@ -78,6 +93,22 @@ const Index = () => {
   const handleGameStart = (room: Room) => {
     setGameState(room.gameState);
     setAppState('game');
+  };
+
+  const handleOpponentLeft = () => {
+    if (playerSession?.isHost) {
+      setGameState(null);
+      setAppState('waiting');
+      return;
+    }
+
+    setGameState(null);
+    setRoomId(null);
+    setPlayerSession(null);
+    setAppState('start');
+    const url = new URL(window.location.href);
+    url.searchParams.delete('room');
+    window.history.replaceState({}, '', url.toString());
   };
 
   if (appState === 'start') {
@@ -116,6 +147,7 @@ const Index = () => {
         onBack={handleBackToStart}
         roomId={roomId || undefined}
         playerSession={playerSession || undefined}
+        onOpponentLeft={handleOpponentLeft}
       />
     );
   }

@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 import { describe, expect, it } from 'vitest';
 import { HttpError } from './http.js';
-import { createRoom, deleteRoom, joinRoom, playMove } from './rooms.js';
+import { createRoom, deleteRoom, getRoom, joinRoom, leaveRoom, playMove } from './rooms.js';
 
 dotenv.config({ path: '.env.local', quiet: true });
 
@@ -38,6 +38,11 @@ integration('API de salas com Upstash', () => {
     await expect(deleteRoom(host.room.id, guest.playerToken)).rejects.toMatchObject({
       status: 403,
     } satisfies Partial<HttpError>);
+
+    await expect(leaveRoom(host.room.id, guest.playerToken)).resolves.toBe('left');
+    const waitingRoom = await getRoom(host.room.id);
+    expect(waitingRoom?.players).toHaveLength(1);
+    expect(waitingRoom?.gameState.gameStatus).toBe('waiting');
     await deleteRoom(host.room.id, host.playerToken);
   });
 });
