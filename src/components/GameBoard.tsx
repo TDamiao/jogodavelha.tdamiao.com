@@ -28,7 +28,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onCellClick, disabled 
       if (playerPositions[player as 'X' | 'O'].length === 3 && !disabled) {
         const oldestPosition = playerPositions[player as 'X' | 'O'][0];
         if (index === oldestPosition && board[index] === player) {
-          classes += ' opacity-60 ring-2 ring-yellow-500';
+          classes += ' is-fading';
         }
       }
     });
@@ -40,11 +40,11 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onCellClick, disabled 
     const value = board[index];
     if (!value) return '';
     
-    return value === 'X' ? '✕' : '⭕';
+    return value;
   };
 
   return (
-    <div className="grid grid-cols-3 gap-3 p-6 bg-card/30 backdrop-blur-sm rounded-lg border border-border/50">
+    <div className="game-board" aria-label="Tabuleiro do jogo">
       {board.map((_, index) => (
         <button
           key={index}
@@ -52,8 +52,9 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onCellClick, disabled 
           onClick={() => !disabled && onCellClick(index)}
           disabled={disabled || board[index] !== null}
           aria-label={`Célula ${index + 1}`}
+          data-symbol={board[index] ?? undefined}
         >
-          <span className="animate-bounce-in">
+          <span key={`${index}-${board[index]}`} className="game-mark">
             {getCellContent(index)}
           </span>
         </button>

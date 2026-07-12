@@ -6,6 +6,7 @@ import type { Room } from '../types/game';
 
 interface WaitingRoomProps {
   roomId: string;
+  hostName: string;
   onBack: () => void;
   onGameStart: (room: Room, playerName?: string, playerToken?: string) => void;
   isGuest?: boolean;
@@ -13,6 +14,7 @@ interface WaitingRoomProps {
 
 const WaitingRoom: React.FC<WaitingRoomProps> = ({ 
   roomId, 
+  hostName,
   onBack, 
   onGameStart,
   isGuest = false
@@ -28,8 +30,9 @@ const WaitingRoom: React.FC<WaitingRoomProps> = ({
   }
 
   return (
-    <WaitingRoomHost 
-      roomId={roomId}
+      <WaitingRoomHost
+        roomId={roomId}
+        hostName={hostName}
       onBack={onBack}
       onGameStart={onGameStart}
     />

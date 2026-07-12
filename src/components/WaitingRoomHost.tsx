@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Share2, Users } from 'lucide-react';
+import { ArrowLeft, Check, Share2, Swords } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { getRoom } from '../utils/roomManager';
 import RoomInfoCard from './RoomInfoCard';
@@ -11,12 +11,14 @@ import type { Room } from '../types/game';
 
 interface WaitingRoomHostProps {
   roomId: string;
+  hostName: string;
   onBack: () => void;
   onGameStart: (room: Room) => void;
 }
 
 const WaitingRoomHost: React.FC<WaitingRoomHostProps> = ({ 
   roomId, 
+  hostName,
   onBack, 
   onGameStart
 }) => {
@@ -64,7 +66,8 @@ const WaitingRoomHost: React.FC<WaitingRoomHostProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-4 relative">
+    <main className="arena-shell min-h-screen p-4 relative">
+      <div className="arena-grid" aria-hidden="true" />
       
       <div className="max-w-2xl mx-auto space-y-6 relative z-10">
         <div className="flex items-center justify-between">
@@ -78,26 +81,44 @@ const WaitingRoomHost: React.FC<WaitingRoomHostProps> = ({
           </Button>
         </div>
 
-        <Card className="bg-card/90 backdrop-blur-sm border-border/50 text-center">
+        <Card className="bg-zinc-900/90 border-white/10 text-center shadow-2xl overflow-hidden">
+          <div className="h-1 bg-blue-500" />
           <CardHeader>
             <div className="flex justify-center mb-4">
-              <div className="bg-rose-600 p-4 rounded-lg shadow-lg shadow-rose-950/40">
-                <Users className="w-12 h-12 text-white" />
+              <div className="bg-blue-600 p-4 rounded-lg shadow-lg shadow-blue-950/40">
+                <Swords className="w-10 h-10 text-white" />
               </div>
             </div>
-            <CardTitle className="text-3xl">Sala de Espera</CardTitle>
+            <div className="text-xs font-bold text-blue-400">DESAFIO CRIADO</div>
+            <CardTitle className="text-3xl font-black">Esperando seu rival</CardTitle>
             <p className="text-muted-foreground">
-              Aguardando outro jogador se conectar...
+              O duelo começa automaticamente quando ele entrar.
             </p>
           </CardHeader>
           
           <CardContent className="space-y-6">
             <RoomInfoCard roomId={roomId} waitingTime={waitingTime} />
 
+            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+              <div className="rounded-md border border-blue-500/30 bg-blue-500/10 p-3 text-left">
+                <div className="mb-2 flex items-center justify-between text-xs font-bold text-blue-300">
+                  JOGADOR X <Check className="h-4 w-4" />
+                </div>
+                <div className="truncate font-bold text-white">{hostName}</div>
+                <div className="text-xs text-zinc-500">Pronto para jogar</div>
+              </div>
+              <div className="text-xs font-black text-zinc-600">VS</div>
+              <div className="waiting-opponent rounded-md border border-dashed border-rose-500/30 bg-rose-500/5 p-3 text-right">
+                <div className="mb-2 text-xs font-bold text-rose-300">JOGADOR O</div>
+                <div className="font-bold text-zinc-400">Aguardando...</div>
+                <div className="text-xs text-zinc-600">Convide alguém</div>
+              </div>
+            </div>
+
             <div className="space-y-3">
               <Button 
                 onClick={shareRoomLink}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-lg py-6"
+                className="w-full bg-rose-600 hover:bg-rose-500 text-lg py-6 shadow-lg shadow-rose-950/30"
               >
                 <Share2 className="w-5 h-5 mr-2" />
                 Compartilhar Link da Sala
@@ -112,7 +133,7 @@ const WaitingRoomHost: React.FC<WaitingRoomHostProps> = ({
           </CardContent>
         </Card>
       </div>
-    </div>
+    </main>
   );
 };
 

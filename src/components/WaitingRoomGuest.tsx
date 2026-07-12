@@ -69,7 +69,8 @@ const WaitingRoomGuest: React.FC<WaitingRoomGuestProps> = ({
   // Se ainda não verificou a sala
   if (roomExists === null) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4 relative">
+      <div className="arena-shell min-h-screen flex items-center justify-center p-4 relative">
+        <div className="arena-grid" aria-hidden="true" />
         
         <Card className="w-full max-w-md bg-card/90 backdrop-blur-sm border-border/50 shadow-2xl relative z-10">
           <CardContent className="text-center py-8">
@@ -87,7 +88,8 @@ const WaitingRoomGuest: React.FC<WaitingRoomGuestProps> = ({
   // Se a sala não existe
   if (roomExists === false) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4 relative">
+      <div className="arena-shell min-h-screen flex items-center justify-center p-4 relative">
+        <div className="arena-grid" aria-hidden="true" />
         
         <Card className="w-full max-w-md bg-card/90 backdrop-blur-sm border-border/50 shadow-2xl relative z-10">
           <CardHeader className="text-center">
@@ -130,16 +132,19 @@ const WaitingRoomGuest: React.FC<WaitingRoomGuestProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4 relative">
+    <main className="arena-shell min-h-screen flex items-center justify-center p-4 relative">
+      <div className="arena-grid" aria-hidden="true" />
       
       <Card className="w-full max-w-md bg-card/90 backdrop-blur-sm border-border/50 shadow-2xl relative z-10">
-        <CardHeader className="text-center">
+        <div className="h-1 bg-rose-500" />
+        <CardHeader className="text-center pt-7">
           <div className="flex justify-center mb-4">
-            <div className="bg-rose-600 p-4 rounded-lg shadow-lg shadow-rose-950/40">
-              <Users className="w-12 h-12 text-white" />
+              <div className="bg-rose-600 p-4 rounded-lg shadow-lg shadow-rose-950/40">
+              <Users className="w-10 h-10 text-white" />
             </div>
           </div>
-          <CardTitle className="text-2xl">Entrar na Sala</CardTitle>
+          <div className="text-xs font-bold text-rose-400">VOCÊ FOI DESAFIADO</div>
+          <CardTitle className="text-2xl font-black">Entre no duelo</CardTitle>
           <p className="text-muted-foreground">
             Sala: <span className="font-mono font-bold text-primary">{roomId}</span>
           </p>
@@ -165,7 +170,7 @@ const WaitingRoomGuest: React.FC<WaitingRoomGuestProps> = ({
           
           <Button 
             onClick={joinAsGuest}
-            className="w-full h-12 bg-rose-600 hover:bg-rose-700 text-white font-semibold"
+            className="w-full h-12 bg-rose-600 hover:bg-rose-500 text-white font-semibold shadow-lg shadow-rose-950/30"
             disabled={!guestName.trim() || isJoining}
           >
             {isJoining ? 'Entrando...' : 'Entrar e Jogar'}
@@ -181,7 +186,7 @@ const WaitingRoomGuest: React.FC<WaitingRoomGuestProps> = ({
           </Button>
         </CardContent>
       </Card>
-    </div>
+    </main>
   );
 };
 

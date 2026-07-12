@@ -88,6 +88,7 @@ const Index = () => {
     return (
       <WaitingRoom
         roomId={roomId}
+        hostName={playerName}
         onBack={handleBackToStart}
         onGameStart={handleJoinGame}
         isGuest={true}
@@ -99,6 +100,7 @@ const Index = () => {
     return (
       <WaitingRoom
         roomId={roomId}
+        hostName={playerName}
         onBack={handleBackToStart}
         onGameStart={handleGameStart}
         isGuest={false}

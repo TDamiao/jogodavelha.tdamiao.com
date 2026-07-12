@@ -59,23 +59,125 @@
   body {
     @apply bg-background text-foreground font-sans;
     font-family: 'Inter', sans-serif;
+    min-width: 320px;
   }
 }
 
 @layer components {
+  .arena-shell {
+    position: relative;
+    overflow: hidden;
+    background: #09090b;
+    isolation: isolate;
+  }
+
+  .arena-shell::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+    background-size: 32px 32px;
+    mask-image: linear-gradient(to bottom, black, transparent 72%);
+    pointer-events: none;
+  }
+
+  .arena-grid {
+    position: absolute;
+    top: -180px;
+    left: 50%;
+    width: min(900px, 140vw);
+    height: 460px;
+    transform: translateX(-50%);
+    border: 1px solid rgba(59, 130, 246, 0.16);
+    border-radius: 50%;
+    box-shadow: 0 0 120px rgba(59, 130, 246, 0.11), inset 0 0 100px rgba(244, 63, 94, 0.06);
+    pointer-events: none;
+  }
+
+  .match-stage {
+    @apply mx-auto max-w-3xl rounded-lg border border-white/10 bg-zinc-900/75 px-3 py-5 shadow-2xl sm:px-8 sm:py-7;
+    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.48);
+  }
+
+  .player-versus-grid {
+    @apply grid items-center gap-2;
+    grid-template-columns: minmax(0, 1fr) 36px minmax(0, 1fr);
+  }
+
+  .player-banner {
+    @apply relative flex min-h-16 items-center gap-3 overflow-hidden rounded-md border px-3 py-2 transition-all duration-300 sm:px-4;
+    background: rgba(24, 24, 27, 0.86);
+  }
+
+  .player-banner::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0;
+    height: 3px;
+    transform: scaleX(0);
+    transition: transform 300ms ease;
+  }
+
+  .player-banner.is-active {
+    transform: translateY(-2px);
+  }
+
+  .player-banner.is-active::after,
+  .player-banner.is-winner::after {
+    transform: scaleX(1);
+  }
+
+  .player-x { @apply border-blue-500/20; }
+  .player-x.is-active { @apply border-blue-400/70; box-shadow: 0 10px 30px rgba(59, 130, 246, 0.16); }
+  .player-x::after { @apply bg-blue-500; transform-origin: left; }
+  .player-o { @apply flex-row-reverse border-rose-500/20; }
+  .player-o.is-active { @apply border-rose-400/70; box-shadow: 0 10px 30px rgba(244, 63, 94, 0.16); }
+  .player-o::after { @apply bg-rose-500; transform-origin: right; }
+
+  .player-symbol {
+    @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-2xl font-black sm:h-12 sm:w-12 sm:text-3xl;
+  }
+
+  .player-x .player-symbol { @apply bg-blue-500/15 text-blue-400; }
+  .player-o .player-symbol { @apply bg-rose-500/15 text-rose-400; }
+  .player-kicker { @apply text-[10px] font-bold text-zinc-500 sm:text-xs; letter-spacing: 0.08em; }
+  .versus-mark { @apply text-center text-xs font-black text-zinc-600; }
+  .winner-crown { @apply ml-auto h-5 w-5 shrink-0 text-amber-300; animation: crown-pop 550ms cubic-bezier(.2,.8,.2,1) both; }
+
+  .match-callout {
+    @apply mx-auto mt-5 flex min-h-11 w-fit max-w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-black/30 px-4 text-center text-sm font-semibold text-zinc-200 sm:text-base;
+  }
+
+  .match-callout-winner { @apply border-amber-300/30 bg-amber-400/10 text-amber-100; }
+  .turn-dot { @apply h-2.5 w-2.5 shrink-0 rounded-full; animation: turn-pulse 1.6s ease-in-out infinite; }
+  .turn-dot-x { @apply bg-blue-400; box-shadow: 0 0 14px rgba(96, 165, 250, .8); }
+  .turn-dot-o { @apply bg-rose-400; box-shadow: 0 0 14px rgba(251, 113, 133, .8); }
+  .board-zone { @apply mt-5 flex justify-center; perspective: 900px; }
+
+  .game-board {
+    @apply grid grid-cols-3 gap-2 rounded-lg border border-white/10 bg-black/25 p-3 sm:gap-3 sm:p-4;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 20px 45px rgba(0,0,0,.28);
+  }
+
   .game-cell {
-    @apply w-20 h-20 sm:w-24 sm:h-24 bg-card border-2 border-border rounded-xl 
-           flex items-center justify-center text-3xl sm:text-4xl font-bold
-           cursor-pointer transition-all duration-200 hover:bg-accent hover:scale-105
-           hover:border-primary/50;
+    @apply relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-md border border-white/10 bg-zinc-900
+           text-4xl font-black transition-all duration-200 sm:h-24 sm:w-24 sm:text-5xl;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.045), 0 6px 16px rgba(0,0,0,.25);
+  }
+
+  .game-cell:not(:disabled) {
+    @apply cursor-pointer hover:-translate-y-1 hover:border-white/25 hover:bg-zinc-800;
   }
   
   .game-cell.occupied {
-    @apply cursor-not-allowed hover:scale-100;
+    @apply cursor-not-allowed;
   }
   
   .game-cell.winning {
-    @apply bg-primary/20 border-primary animate-pulse-win;
+    @apply border-amber-300 bg-amber-300/10;
+    animation: winner-cell 900ms ease-in-out infinite alternate;
   }
   
   .game-cell.player1 {
@@ -85,13 +187,86 @@
   .game-cell.player2 {
     @apply text-game-player2;
   }
+
+  .game-cell.is-fading {
+    @apply border-amber-300/60;
+    animation: fading-piece 1.2s ease-in-out infinite;
+  }
+
+  .game-cell.is-fading::after {
+    content: 'SAI NA PRÓXIMA';
+    @apply absolute bottom-1 text-[7px] font-bold text-amber-300;
+    letter-spacing: 0.04em;
+  }
+
+  .game-mark {
+    display: block;
+    animation: mark-enter 280ms cubic-bezier(.2,.9,.25,1.35) both;
+  }
   
   .game-cell.bot {
     @apply text-game-bot;
   }
   
   .stats-card {
-    @apply bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-4
-           transition-all duration-200 hover:bg-card/70;
+    @apply rounded-md border border-white/10 bg-zinc-900/65 p-4 transition-colors duration-200 hover:bg-zinc-900;
   }
+
+  .waiting-opponent {
+    animation: waiting-breathe 1.8s ease-in-out infinite;
+  }
+}
+
+@keyframes mark-enter {
+  from { opacity: 0; transform: scale(.35) rotate(-12deg); }
+  to { opacity: 1; transform: scale(1) rotate(0); }
+}
+
+@keyframes turn-pulse {
+  50% { opacity: .45; transform: scale(.72); }
+}
+
+@keyframes fading-piece {
+  50% { opacity: .56; }
+}
+
+@keyframes winner-cell {
+  to { box-shadow: 0 0 28px rgba(252, 211, 77, .22), inset 0 0 18px rgba(252, 211, 77, .12); }
+}
+
+@keyframes crown-pop {
+  from { opacity: 0; transform: translateY(8px) rotate(-20deg) scale(.4); }
+  to { opacity: 1; transform: translateY(0) rotate(0) scale(1); }
+}
+
+@keyframes waiting-breathe {
+  50% { border-color: rgba(251, 113, 133, .52); background-color: rgba(244, 63, 94, .09); }
+}
+
+.victory-burst { position: fixed; inset: 0; z-index: 20; pointer-events: none; overflow: hidden; }
+.victory-burst span { position: absolute; top: -20px; left: 50%; width: 8px; height: 14px; background: #facc15; animation: confetti-fall 1.8s ease-out both; }
+.victory-burst span:nth-child(3n) { background: #60a5fa; }
+.victory-burst span:nth-child(3n + 1) { background: #fb7185; }
+.victory-burst span:nth-child(1) { left: 8%; animation-delay: .02s; }
+.victory-burst span:nth-child(2) { left: 15%; animation-delay: .22s; }
+.victory-burst span:nth-child(3) { left: 22%; animation-delay: .08s; }
+.victory-burst span:nth-child(4) { left: 29%; animation-delay: .31s; }
+.victory-burst span:nth-child(5) { left: 36%; animation-delay: .14s; }
+.victory-burst span:nth-child(6) { left: 43%; animation-delay: .38s; }
+.victory-burst span:nth-child(7) { left: 49%; animation-delay: .04s; }
+.victory-burst span:nth-child(8) { left: 55%; animation-delay: .28s; }
+.victory-burst span:nth-child(9) { left: 61%; animation-delay: .12s; }
+.victory-burst span:nth-child(10) { left: 67%; animation-delay: .34s; }
+.victory-burst span:nth-child(11) { left: 73%; animation-delay: .06s; }
+.victory-burst span:nth-child(12) { left: 79%; animation-delay: .25s; }
+.victory-burst span:nth-child(13) { left: 85%; animation-delay: .17s; }
+.victory-burst span:nth-child(14) { left: 91%; animation-delay: .4s; }
+.victory-burst span:nth-child(n + 15) { animation-delay: .5s; }
+
+@keyframes confetti-fall {
+  to { transform: translate3d(calc((var(--i, 1) - 2) * 30px), 105vh, 0) rotate(620deg); opacity: .2; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }

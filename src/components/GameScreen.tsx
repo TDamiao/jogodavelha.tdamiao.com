@@ -1,8 +1,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, RotateCcw, Share2, Crown, Bot } from 'lucide-react';
+import { ArrowLeft, RotateCcw, Share2, Crown, Bot, Swords, Wifi } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import GameBoard from './GameBoard';
 import GameStats from './GameStats';
@@ -257,13 +256,6 @@ const GameScreen: React.FC<GameScreenProps> = ({
     return gameState.currentPlayer === 'X' ? playerName : 'Adversário';
   };
 
-  const getPlayerIcon = () => {
-    if (gameState.gameMode === 'bot' && gameState.currentPlayer === 'O') {
-      return <Bot className="w-5 h-5" />;
-    }
-    return <Crown className="w-5 h-5" />;
-  };
-
   const getGameStatusMessage = () => {
     if (gameState.winner) {
       if (gameState.gameMode === 'multiplayer' && roomInfo) {
@@ -286,78 +278,130 @@ const GameScreen: React.FC<GameScreenProps> = ({
     return `Vez de ${getCurrentPlayerName()}`;
   };
 
+  const getPlayerName = (symbol: 'X' | 'O') => {
+    if (gameState.gameMode === 'bot') return symbol === 'X' ? playerName : 'Bot';
+    return roomInfo?.players.find(player => player.symbol === symbol)?.name
+      ?? (symbol === playerSession?.symbol ? playerName : 'Adversário');
+  };
+
+  const winnerName = gameState.winner ? getPlayerName(gameState.winner) : null;
+
   return (
-    <div className="min-h-screen bg-zinc-950 p-4">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+    <main className="arena-shell min-h-screen px-4 py-4 sm:px-6 sm:py-6">
+      <div className="arena-grid" aria-hidden="true" />
+      {gameState.winner && (
+        <div className="victory-burst" aria-hidden="true">
+          {Array.from({ length: 18 }, (_, index) => <span key={index} />)}
+        </div>
+      )}
+
+      <div className="relative z-10 mx-auto max-w-5xl">
+        <header className="mb-5 flex items-center justify-between">
           <Button 
             variant="ghost" 
             onClick={onBack}
-            className="text-white hover:bg-white/10"
+            className="text-zinc-300 hover:bg-white/10 hover:text-white"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Voltar
           </Button>
-          
+
+          <div className="hidden items-center gap-2 text-sm font-semibold text-zinc-400 sm:flex">
+            <Swords className="h-4 w-4 text-amber-400" />
+            ARENA 3 EM LINHA
+          </div>
+
           <div className="flex gap-2">
             {roomId && (
               <Button 
-                variant="outline" 
+                variant="ghost"
                 onClick={shareRoom}
-                className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                size="icon"
+                className="text-zinc-300 hover:bg-white/10 hover:text-white"
+                title="Compartilhar sala"
               >
-                <Share2 className="w-4 h-4 mr-2" />
-                Compartilhar
+                <Share2 className="w-4 h-4" />
               </Button>
             )}
             <Button 
-              variant="outline" 
+              variant="ghost"
               onClick={resetGame}
-              className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+              size="icon"
+              className="text-zinc-300 hover:bg-white/10 hover:text-white"
+              title="Reiniciar partida"
             >
-              <RotateCcw className="w-4 h-4 mr-2" />
-              Reiniciar
+              <RotateCcw className="w-4 h-4" />
             </Button>
           </div>
-        </div>
+        </header>
 
-        {/* Game Status */}
-        <Card className="bg-card/90 backdrop-blur-sm border-border/50">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-center">
-              {gameState.winner ? (
-                <div className="flex items-center justify-center gap-2 text-2xl">
-                  <Crown className="w-8 h-8 text-yellow-500" />
-                  {getGameStatusMessage()}
-                </div>
-              ) : (
-                <div className="flex items-center justify-center gap-2">
-                  {getPlayerIcon()}
-                  <span className={isThinking ? 'animate-pulse' : ''}>
-                    {isThinking ? 'Bot pensando...' : getGameStatusMessage()}
-                  </span>
-                </div>
-              )}
-            </CardTitle>
-          </CardHeader>
-          
-          <CardContent className="flex justify-center">
+        <section className="match-stage">
+          <div className="player-versus-grid">
+            <div className={`player-banner player-x ${gameState.currentPlayer === 'X' && !gameState.winner ? 'is-active' : ''} ${gameState.winner === 'X' ? 'is-winner' : ''}`}>
+              <div className="player-symbol">X</div>
+              <div className="min-w-0">
+                <div className="player-kicker">JOGADOR X</div>
+                <div className="truncate text-lg font-bold text-white sm:text-xl">{getPlayerName('X')}</div>
+              </div>
+              {gameState.winner === 'X' && <Crown className="winner-crown" />}
+            </div>
+
+            <div className="versus-mark" aria-hidden="true">VS</div>
+
+            <div className={`player-banner player-o ${gameState.currentPlayer === 'O' && !gameState.winner ? 'is-active' : ''} ${gameState.winner === 'O' ? 'is-winner' : ''}`}>
+              <div className="player-symbol">O</div>
+              <div className="min-w-0 text-right">
+                <div className="player-kicker">{gameState.gameMode === 'bot' ? 'DESAFIANTE' : 'JOGADOR O'}</div>
+                <div className="truncate text-lg font-bold text-white sm:text-xl">{getPlayerName('O')}</div>
+              </div>
+              {gameState.gameMode === 'bot' && <Bot className="h-5 w-5 text-amber-300" />}
+              {gameState.winner === 'O' && <Crown className="winner-crown" />}
+            </div>
+          </div>
+
+          <div className={`match-callout ${gameState.winner ? 'match-callout-winner' : ''}`} role="status" aria-live="polite">
+            {gameState.winner ? (
+              <>
+                <Crown className="h-5 w-5 text-amber-300" />
+                <span><strong>{winnerName}</strong> dominou a arena!</span>
+              </>
+            ) : (
+              <>
+                <span className={`turn-dot ${gameState.currentPlayer === 'X' ? 'turn-dot-x' : 'turn-dot-o'}`} />
+                <span className={isThinking ? 'animate-pulse' : ''}>
+                  {isThinking ? 'Bot calculando a próxima jogada...' : getGameStatusMessage()}
+                </span>
+                {roomId && <Wifi className="h-4 w-4 text-emerald-400" aria-label="Partida conectada" />}
+              </>
+            )}
+          </div>
+
+          <div className="board-zone">
             <GameBoard 
               gameState={gameState}
               onCellClick={handleMove}
               disabled={isThinking || gameState.winner !== null || (gameState.gameMode === 'multiplayer' && !isMyTurn)}
             />
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* Statistics */}
-        <GameStats 
-          stats={stats} 
-          currentGameTime={Math.floor((Date.now() - stats.currentGameStartTime) / 1000)} 
-        />
+          {gameState.winner && (
+            <div className="mt-5 flex justify-center">
+              <Button onClick={resetGame} className="h-12 bg-amber-400 px-6 font-bold text-zinc-950 hover:bg-amber-300">
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Jogar revanche
+              </Button>
+            </div>
+          )}
+        </section>
+
+        <section className="mt-6">
+          <GameStats
+            stats={stats}
+            currentGameTime={Math.floor((Date.now() - stats.currentGameStartTime) / 1000)}
+          />
+        </section>
       </div>
-    </div>
+    </main>
   );
 };
 
