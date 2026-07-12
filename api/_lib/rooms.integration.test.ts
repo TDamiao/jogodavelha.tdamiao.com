@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 import { describe, expect, it } from 'vitest';
-import { HttpError } from './http';
-import { createRoom, deleteRoom, joinRoom, playMove } from './rooms';
+import { HttpError } from './http.js';
+import { createRoom, deleteRoom, joinRoom, playMove } from './rooms.js';
 
 dotenv.config({ path: '.env.local', quiet: true });
 

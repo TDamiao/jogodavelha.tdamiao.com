@@ -42,7 +42,7 @@ const Index = () => {
         setAppState('waiting');
       } catch (err) {
         console.error('Erro ao criar sala', err);
-        alert('Não foi possível criar a sala. Verifique as credenciais do Upstash.');
+        alert(err instanceof Error ? err.message : 'Não foi possível criar a sala. Tente novamente.');
       }
     }
   };

@@ -1,8 +1,8 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { Redis } from '@upstash/redis';
-import type { Player, Room } from '../../src/types/game';
-import { createInitialGameState, makeMove } from '../../src/utils/gameLogic';
-import { HttpError } from './http';
+import type { Player, Room } from '../../src/types/game.js';
+import { createInitialGameState, makeMove } from '../../src/utils/gameLogic.js';
+import { HttpError } from './http.js';
 
 const ROOM_PREFIX = 'room:';
 const ROOM_TTL_SECONDS = 60 * 60;

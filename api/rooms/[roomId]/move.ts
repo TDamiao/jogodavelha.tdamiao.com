@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { allowMethods, getBearerToken, getRoomId, handleApiError } from '../../_lib/http';
-import { playMove } from '../../_lib/rooms';
+import { allowMethods, getBearerToken, getRoomId, handleApiError } from '../../_lib/http.js';
+import { playMove } from '../../_lib/rooms.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (!allowMethods(req, res, ['POST'])) return;
