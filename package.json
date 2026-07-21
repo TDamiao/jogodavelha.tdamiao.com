@@ -83,7 +83,7 @@
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.63.0",
     "vite": "^5.4.1",
-    "vitest": "^4.1.10"
+    "vitest": "^2.1.9"
   },
   "description": "Aplicação web do clássico jogo da velha construída com React, TypeScript e Vite. Um projeto open-source para a comunidade.",
   "main": "eslint.config.js",
